@@ -169,16 +169,16 @@ if st.button("Gerar times"):
         incompatibilidades=incompatibilidades
     )
 
-    print("Solução ótima!\n")
+    st.write("Solução ótima!\n")
     
     for idx, membros in enumerate(times, start=1):
         soma = sum(n for _, n in membros)
         membros_nomes = [(jogadores_df[jogadores_df["id"]==id]["nome"].values[0], nota) for (id, nota) in membros]
-        print(f"Time {idx:02d}: {membros_nomes} | Soma = {soma}")
+        st.write(f"Time {idx:02d}: {membros_nomes} | Soma = {soma}")
 
-    print("\nMétricas:")
-    print(f"  Média-alvo por time: {metricas['media_alvo_por_time']:.3f}")
-    print(f"  Somas por time: {metricas['somas_por_time']}")
-    print(f"  Desvios absolutos: {[round(v,3) for v in metricas['desvios_absolutos']]}")
-    print(f"  Range (max-min): {metricas['range']:.3f}")
-    print(f"  Valor da função objetivo: {metricas['objetivo']:.3f}")
+    st.write("\nMétricas:")
+    st.write(f"  Média-alvo por time: {metricas['media_alvo_por_time']:.3f}")
+    st.write(f"  Somas por time: {metricas['somas_por_time']}")
+    st.write(f"  Desvios absolutos: {[round(v,3) for v in metricas['desvios_absolutos']]}")
+    st.write(f"  Range (max-min): {metricas['range']:.3f}")
+    st.write(f"  Valor da função objetivo: {metricas['objetivo']:.3f}")
