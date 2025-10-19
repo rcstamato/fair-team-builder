@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from optimizer import formar_quartetos_balanceados
+from optimizer import processar
 
 st.title("Fair Team Builder")
 st.text("Esse app divide uma lista de jogadores em quartetos, visando manter o equilíbrio entre os times")
@@ -33,27 +33,20 @@ if st.button("Adicionar restrição"):
     restricoes.loc[len(restricoes)] = [player_a, modified_df.loc[player_a, "nome"], player_b, modified_df.loc[player_b, "nome"]]
 
 
-st.dataframe(restricoes[["nome_a", "nome_b"]])
+st.dataframe(restricoes)
 
 st.header("Passo 3: definir os times")
 
 if st.button("Gerar times"):
-    jogadores_df["id"] = jogadores_df.index
-    jogadores = [tuple(row) for row in jogadores_df[["id", "score", "sexo"]].itertuples(index=False)]
-    incompatibilidades = [(row[0], row[2]) for row in restricoes.itertuples(index=False)]
 
-    times, metricas = formar_quartetos_balanceados(
-        jogadores,
-        peso_range=0.0,
-        incompatibilidades=incompatibilidades
-    )
+    times, metricas = processar(jogadores_df, restricoes)
 
     st.write("Solução ótima!\n")
     
     for idx, membros in enumerate(times, start=1):
-        soma = sum(n for _, n in membros)
+        media = sum(n for _, n in membros) / len(membros)
         membros_nomes = [(jogadores_df[jogadores_df["id"]==id]["nome"].values[0], nota) for (id, nota) in membros]
-        st.write(f"Time {idx:02d}: {membros_nomes} | Soma = {soma}")
+        st.write(f"Time {idx:02d}: {membros_nomes} | Media = {media:.2f}")
 
     st.write("\nMétricas:")
     st.write(f"  Média-alvo por time: {metricas['media_alvo_por_time']:.3f}")

@@ -1,4 +1,68 @@
+import random
+
+import pandas as pd
 from ortools.linear_solver import pywraplp
+from itertools import chain
+
+
+def separar_reservas(jogadores):
+    num_reservas = len(jogadores) % 4
+    if num_reservas == 0:
+        return jogadores, []
+
+    jogadores_sorted = jogadores.sort_values("score", ascending=False)
+    titulares = jogadores_sorted[:-num_reservas]
+    reservas = jogadores_sorted[-num_reservas:]
+
+    return titulares, reservas
+
+
+def adicionar_reservas(times, reservas, restricoes):
+    random.shuffle(times)
+
+    for _i, reserva in reservas.iterrows():
+        allocated = False
+        for time in times:
+            if len(time) > 4: # Já tem número máximo de jogadores
+                continue
+            if can_be_placed_in_team(reserva, time, restricoes):
+                time.append(reserva[["id", "score"]].astype(int))
+                allocated = True
+                break
+
+        if not allocated:
+            raise RuntimeError("Reserva {} não pode ser alocado em nenhum time".format(reserva))
+
+
+def can_be_placed_in_team(reserva, time, restricoes):
+    reserva_id = reserva[0]
+    restricoes_reserva = list(filter(lambda x: x[0] == reserva_id or x[1] == reserva_id, restricoes))
+    parceiros_restritos = list(filter(lambda x: x != reserva_id, list(chain.from_iterable(restricoes_reserva))))
+    jogadores_time = [x[0] for x in time]
+
+    if len(set(parceiros_restritos) & set(jogadores_time)) > 0:
+        return False
+
+    return True
+
+
+def processar(jogadores_df, restricoes):
+    jogadores_df["id"] = jogadores_df.index
+    titulares_df, reservas_df = separar_reservas(jogadores_df)
+
+    titulares = [tuple(row) for row in titulares_df[["id", "score", "sexo"]].itertuples(index=False)]
+    incompatibilidades = [(row[0], row[2]) for row in restricoes.itertuples(index=False)]
+
+    times, metricas = formar_quartetos_balanceados(
+        titulares,
+        peso_range=0.0,
+        incompatibilidades=incompatibilidades
+    )
+
+    if len(reservas_df) > 0:
+        adicionar_reservas(times, reservas_df, incompatibilidades)
+
+    return times, metricas
 
 
 def formar_quartetos_balanceados(
@@ -32,9 +96,9 @@ def formar_quartetos_balanceados(
     id_to_idx = {pid: i for i, pid in enumerate(ids)}
 
     # Valida entradas de afinidade/incompatibilidade
-    for a, b in incompatibilidades:
-        if a not in id_to_idx or b not in id_to_idx:
-            raise ValueError(f"Par de incompatibilidade ({a}, {b}) contém ID não listado em 'jogadores'.")
+    # for a, b in incompatibilidades:
+    #     if a not in id_to_idx or b not in id_to_idx:
+    #         raise ValueError(f"Par de incompatibilidade ({a}, {b}) contém ID não listado em 'jogadores'.")
 
     soma_total = sum(notas)
     media_alvo = soma_total / num_times  # soma por time desejada
@@ -93,8 +157,11 @@ def formar_quartetos_balanceados(
     # 1) Incompatibilidades (pares NÃO PODEM ficar juntos)
     # Para cada par (a,b) e cada time t: x[a,t] + x[b,t] <= 1
     for a, b in incompatibilidades:
-        ia = id_to_idx[a]
-        ib = id_to_idx[b]
+        ia = id_to_idx.get(a)
+        ib = id_to_idx.get(b)
+        if ia is None or ib is None:
+            continue
+
         for t in range(num_times):
             solver.Add(x[ia, t] + x[ib, t] <= 1)
 
@@ -122,3 +189,16 @@ def formar_quartetos_balanceados(
         "objetivo": solver.Objective().Value(),
     }
     return times, metricas
+
+
+
+def main():
+    jogadores_df = pd.read_csv("quartetos-jogadores.csv")
+    restricoes = pd.read_csv("quartetos-restricoes.csv")
+
+    jogadores_df.set_index("id", inplace=True)
+    processar(jogadores_df, restricoes)
+
+
+if __name__ == "__main__":
+    main()
