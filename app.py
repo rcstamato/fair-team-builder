@@ -39,7 +39,8 @@ else:
     restricoes = st.session_state["restricoes"]
 
 with st.container(horizontal_alignment="right"):
-    if st.button("Adicionar restrição", icon=":material/arrow_downward:"):
+    button_disabled = player_a == player_b
+    if st.button("Adicionar restrição", icon=":material/arrow_downward:", disabled=button_disabled):
         restricoes.loc[len(restricoes)] = [player_a, modified_df.loc[player_a, "nome"], player_b, modified_df.loc[player_b, "nome"]]
 
 
